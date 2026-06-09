@@ -1,0 +1,15 @@
+{
+  "name": "fittrack",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:api": "npm run dev --prefix fittrack-api",
+    "dev:web": "npm run dev --prefix fittrack-web",
+    "dev": "concurrently -n api,web -c green,cyan \"npm run dev:api\" \"npm run dev:web\"",
+    "build:web": "npm run build --prefix fittrack-web",
+    "start:api": "npm run start --prefix fittrack-api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
