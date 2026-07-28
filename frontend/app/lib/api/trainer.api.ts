@@ -1,41 +1,33 @@
-import { API_V1 as API_URL } from "./config";
+import type { AuthUser } from "./auth.api";
+import { request, authConfig } from "./axios-instance";
+import { API } from "./endpoints";
 
 export async function getTrainers(token: string) {
-  try {
-    const res = await fetch(`${API_URL}/users/trainers`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store"
-    });
-    return await res.json();
-  } catch (error) {
-    return { success: false, message: "Network error" };
-  }
+  return request<{ trainers: AuthUser[] }>(
+    { method: "GET", url: API.USERS.TRAINERS, ...authConfig(token) },
+    "Failed to load trainers"
+  );
 }
 
 export async function getClients(token: string) {
-  try {
-    const res = await fetch(`${API_URL}/users/clients`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store"
-    });
-    return await res.json();
-  } catch (error) {
-    return { success: false, message: "Network error" };
-  }
+  return request<{ clients: AuthUser[] }>(
+    { method: "GET", url: API.USERS.CLIENTS, ...authConfig(token) },
+    "Failed to load clients"
+  );
 }
 
-export async function initiatePayment(token: string, trainerId: string, amount: number) {
-  try {
-    const res = await fetch(`${API_URL}/payments/initiate`, {
+export async function initiatePayment(
+  token: string,
+  trainerId: string,
+  amount: number
+) {
+  return request<{ payment_url: string; pidx: string }>(
+    {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ trainerId, amount }),
-    });
-    return await res.json();
-  } catch (error) {
-    return { success: false, message: "Network error" };
-  }
+      url: API.PAYMENTS.INITIATE,
+      data: { trainerId, amount },
+      ...authConfig(token),
+    },
+    "Failed to initiate payment"
+  );
 }

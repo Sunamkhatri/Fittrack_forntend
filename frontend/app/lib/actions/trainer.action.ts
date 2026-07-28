@@ -5,8 +5,11 @@ import { getAuthToken } from "../cookies/token";
 
 export async function handleKhaltiPayment(trainerId: string, amount: number) {
   const token = await getAuthToken();
-  if (!token) return { success: false, message: "Unauthorized: Please log in." };
+  if (!token) {
+    // Same shape as a failed request so callers never branch on which
+    // failure they got.
+    return { success: false, message: "Unauthorized: Please log in.", data: null };
+  }
 
-  const res = await initiatePayment(token, trainerId, amount);
-  return res;
+  return initiatePayment(token, trainerId, amount);
 }
