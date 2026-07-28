@@ -1,52 +1,42 @@
 import type { AuthUser } from "./auth.api";
-import { API_V1 } from "./config";
-
-const API_BASE = `${API_V1}/users`;
+import { request, authConfig, multipartConfig } from "./axios-instance";
+import { API } from "./endpoints";
 
 export async function updateProfile(token: string, data: Partial<AuthUser>) {
-  const response = await fetch(`${API_BASE}/profile`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
+  return request<{ user: AuthUser }>(
+    { method: "PUT", url: API.USERS.PROFILE, data, ...authConfig(token) },
+    "Failed to update profile"
+  );
 }
 
-export async function updatePassword(token: string, data: any) {
-  const response = await fetch(`${API_BASE}/change-password`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
+export async function updatePassword(
+  token: string,
+  data: { currentPassword: string; newPassword: string }
+) {
+  return request(
+    { method: "PUT", url: API.USERS.CHANGE_PASSWORD, data, ...authConfig(token) },
+    "Failed to update password"
+  );
 }
 
 export async function uploadProfileImage(token: string, file: File) {
   const formData = new FormData();
   formData.append("profileImage", file);
 
-  const response = await fetch(`${API_BASE}/profile-image`, {
-    method: "POST", // Multer uses POST for creations, but my backend route is POST too
-    headers: {
-      Authorization: `Bearer ${token}`,
+  return request<{ user: AuthUser }>(
+    {
+      method: "POST",
+      url: API.USERS.PROFILE_IMAGE,
+      data: formData,
+      ...multipartConfig(token),
     },
-    body: formData,
-  });
-  return response.json();
+    "Failed to upload image"
+  );
 }
 
 export async function deleteProfileImage(token: string) {
-  const response = await fetch(`${API_BASE}/profile-image`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return response.json();
+  return request<{ user: AuthUser }>(
+    { method: "DELETE", url: API.USERS.PROFILE_IMAGE, ...authConfig(token) },
+    "Failed to remove image"
+  );
 }

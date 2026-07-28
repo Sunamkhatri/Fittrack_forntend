@@ -51,7 +51,7 @@ export default function ProfileManager({
     try {
       setIsLoading(true);
       const res = await uploadProfileImage(token, file);
-      if (res.success) {
+      if (res.success && res.data) {
         updateUser({ profileImage: res.data.user.profileImage });
         setMessage({ type: "success", text: "Profile image updated!" });
       } else {
@@ -91,7 +91,7 @@ export default function ProfileManager({
         caloriesGoal: Number(formData.caloriesGoal),
       });
 
-      if (res.success) {
+      if (res.success && res.data) {
         updateUser(res.data.user);
         setMessage({ type: "success", text: "Profile updated successfully!" });
       } else {
