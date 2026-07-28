@@ -2,8 +2,8 @@ import request from "supertest";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import app from "../src/app.js";
-import { UserModel } from "../src/models/user.model.js";
+import app from "../../app.js";
+import { UserModel } from "../../models/user.model.js";
 
 const TEST_DB = process.env.MONGODB_URI || "mongodb://localhost:27017/fittrack";
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_here";
