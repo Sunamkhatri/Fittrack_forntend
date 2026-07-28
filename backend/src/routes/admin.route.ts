@@ -8,5 +8,6 @@ router.get("/:id", AdminController.getUser);
 router.post("/", AdminController.createUser);
 router.put("/:id", AdminController.updateUser);
 router.delete("/:id", AdminController.deleteUser);
+router.get("/revenue/all", AdminController.getRevenue);
 
 export default router;

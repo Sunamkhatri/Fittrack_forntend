@@ -1,12 +1,14 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
+import crypto from "crypto";
 import { JWT_SECRET } from "../configs/constant.js";
 import { CreateUserDTO, LoginUserDTO } from "../dtos/user.dto.js";
 import { HttpException } from "../exceptions/http-exception.js";
-import { IUser } from "../models/user.model.js";
+import { IUser, UserModel } from "../models/user.model.js";
 import { SessionModel } from "../models/session.model.js";
 import { UserRepository } from "../repositories/user.repository.js";
+import { sendEmail } from "../utils/email.util.js";
 
 const userRepository = new UserRepository();
 
@@ -34,7 +36,7 @@ export class UserService {
     const user = await userRepository.create({
       ...input,
       password: hashedPassword,
-      role: input.role || "user",
+      role: input.role === "trainer" ? "trainer" : "user", // Admin can only be created by admin panel
     });
 
     const token = jwt.sign(
@@ -146,5 +148,74 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await userRepository.updateById(userId, { password: hashedPassword });
+  }
+
+  async getTrainers() {
+    const trainers = await UserModel.find({ role: "trainer" }).select("-password");
+    return trainers.map((t) => sanitizeUser(t));
+  }
+
+  async getClients(trainerId: string) {
+    const trainer = await UserModel.findById(trainerId).populate("clients", "-password");
+    if (!trainer) throw new HttpException(404, "Trainer not found");
+    return trainer.clients.map((c) => sanitizeUser(c));
+  }
+  async forgotPassword(email: string) {
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+      throw new HttpException(404, "There is no user with that email");
+    }
+
+    // Get reset token
+    const resetToken = user.getResetPasswordToken();
+
+    await user.save({ validateBeforeSave: false });
+
+    // Create reset url
+    const resetUrl = `http://localhost:3001/reset-password/${resetToken}`;
+
+    const message = `
+      <h1>You have requested a password reset</h1>
+      <p>Please go to this link to reset your password:</p>
+      <a href=${resetUrl} clicktracking=off>${resetUrl}</a>
+    `;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Password Reset Token",
+        message,
+      });
+    } catch (err) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+      throw new HttpException(500, "Email could not be sent");
+    }
+  }
+
+  async resetPassword(resetToken: string, newPassword: string) {
+    // Get hashed token
+    const resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    const user = await UserModel.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      throw new HttpException(400, "Invalid or expired token");
+    }
+
+    // Set new password
+    user.password = await bcrypt.hash(newPassword, 12);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    return sanitizeUser(user);
   }
 }

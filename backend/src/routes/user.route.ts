@@ -9,6 +9,8 @@ const router = Router();
 router.post("/register", UserController.register);
 router.post("/signup", UserController.register);
 router.post("/login", UserController.login);
+router.post("/forgot-password", UserController.forgotPassword);
+router.put("/reset-password/:token", UserController.resetPassword);
 
 // Protected routes
 router.get("/me", authMiddleware, UserController.getProfile);

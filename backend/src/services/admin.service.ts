@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { AdminRepository } from "../repositories/admin.repository.js";
 import { IUser } from "../models/user.model.js";
 import { HttpException } from "../exceptions/http-exception.js";
+import { PaymentModel } from "../models/payment.model.js";
 
 const adminRepository = new AdminRepository();
 
@@ -113,5 +114,18 @@ export class AdminService {
       throw new HttpException(404, "User not found");
     }
     await adminRepository.deleteById(id);
+  }
+
+  async getRevenue() {
+    const payments = await PaymentModel.find()
+      .populate("user", "firstName lastName email")
+      .populate("trainer", "firstName lastName email")
+      .sort({ createdAt: -1 });
+      
+    const totalRevenue = payments
+      .filter((p) => p.status === "completed")
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    return { totalRevenue, transactions: payments };
   }
 }
