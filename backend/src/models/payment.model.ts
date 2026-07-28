@@ -1,8 +1,8 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, Types } from "mongoose";
 
 export interface IPayment extends Document {
-  user: Schema.Types.ObjectId;
-  trainer: Schema.Types.ObjectId;
+  user: Types.ObjectId;
+  trainer: Types.ObjectId;
   pidx: string;
   transactionId?: string;
   amount: number;

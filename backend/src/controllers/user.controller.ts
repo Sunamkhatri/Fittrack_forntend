@@ -24,7 +24,6 @@ export class UserController {
       const result = await userService.register(parsed.data);
       return ResponseHelper.success(res, 201, "User registered successfully", result);
     } catch (error) {
-      console.error("Register error:", error);
       next(error);
     }
   }
@@ -39,7 +38,6 @@ export class UserController {
       const result = await userService.login(parsed.data);
       return ResponseHelper.success(res, 200, "Login successful", result);
     } catch (error) {
-      console.error("Login error:", error);
       next(error);
     }
   }
@@ -172,7 +170,7 @@ export class UserController {
       }
 
       const user = await userService.resetPassword(
-        req.params.token,
+        req.params.token as string,
         parsed.data.password
       );
 
