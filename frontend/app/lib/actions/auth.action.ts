@@ -22,9 +22,9 @@ export async function handleLogin(data: LoginPayload) {
     return { success: false, message: result.message };
   }
 
-  await setAuthToken(result.data.token);
+  await setAuthToken(result.data.token, result.data.user?.role);
 
-  return { success: true, message: result.message };
+  return { success: true, message: result.message, role: result.data.user?.role };
 }
 
 export async function handleLogout() {
