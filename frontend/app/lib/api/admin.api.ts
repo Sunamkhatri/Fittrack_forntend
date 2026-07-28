@@ -1,20 +1,11 @@
-import { AuthUser } from "./auth.api";
-import { API_V1 } from "./config";
+import type { AuthUser } from "./auth.api";
+import { request, authConfig } from "./axios-instance";
+import { API } from "./endpoints";
 
-const API_BASE = `${API_V1}/admin/users`;
-
-interface ApiResponse<T> {
-  status: number;
-  success: boolean;
-  message: string;
-  data: T;
-}
-
-export interface PaginatedUsers {
-  users: AuthUser[];
-  total: number;
+export interface PaginationMeta {
   page: number;
   limit: number;
+  total: number;
   totalPages: number;
 }
 
@@ -26,106 +17,50 @@ export interface GetUsersParams {
   status?: string;
 }
 
+export type AdminUserPayload = Partial<AuthUser> & { password?: string };
+
 export async function fetchUsers(token: string, params: GetUsersParams = {}) {
-  try {
-    const query = new URLSearchParams();
-    if (params.page) query.append("page", params.page.toString());
-    if (params.limit) query.append("limit", params.limit.toString());
-    if (params.search) query.append("search", params.search);
-    if (params.role) query.append("role", params.role);
-    if (params.status) query.append("status", params.status);
-
-    const response = await fetch(`${API_BASE}?${query.toString()}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: `HTTP ${response.status}`,
-      }));
-      return { success: false, message: error.message || "Failed to fetch users", data: null, meta: null };
-    }
-
-    const result = await response.json();
-    return { success: true, data: result.data, meta: result.meta };
-  } catch (error) {
-    console.error("fetchUsers error:", error);
-    return { success: false, message: "Network error", data: null, meta: null };
-  }
+  return request<AuthUser[]>(
+    { method: "GET", url: API.ADMIN.USERS.GET, params, ...authConfig(token) },
+    "Failed to fetch users"
+  );
 }
 
-export async function createUser(token: string, data: Partial<AuthUser> & { password?: string }) {
-  try {
-    const response = await fetch(`${API_BASE}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-      credentials: "include",
-    });
-
-    const result = await response.json();
-    return { success: response.ok, message: result.message || (response.ok ? "User created" : "Failed"), data: result.data };
-  } catch (error) {
-    console.error("createUser error:", error);
-    return { success: false, message: "Network error", data: null };
-  }
+export async function fetchUser(token: string, id: string) {
+  return request<AuthUser>(
+    { method: "GET", url: API.ADMIN.USERS.GET_ONE(id), ...authConfig(token) },
+    "Failed to fetch user"
+  );
 }
 
-export async function updateUser(token: string, id: string, data: Partial<AuthUser> & { password?: string }) {
-  try {
-    const response = await fetch(`${API_BASE}/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-      credentials: "include",
-    });
+export async function createUser(token: string, data: AdminUserPayload) {
+  return request<AuthUser>(
+    { method: "POST", url: API.ADMIN.USERS.CREATE, data, ...authConfig(token) },
+    "Failed to create user"
+  );
+}
 
-    const result = await response.json();
-    return { success: response.ok, message: result.message || (response.ok ? "User updated" : "Failed"), data: result.data };
-  } catch (error) {
-    console.error("updateUser error:", error);
-    return { success: false, message: "Network error", data: null };
-  }
+export async function updateUser(
+  token: string,
+  id: string,
+  data: AdminUserPayload
+) {
+  return request<AuthUser>(
+    { method: "PUT", url: API.ADMIN.USERS.UPDATE(id), data, ...authConfig(token) },
+    "Failed to update user"
+  );
 }
 
 export async function deleteUser(token: string, id: string) {
-  try {
-    const response = await fetch(`${API_BASE}/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      credentials: "include",
-    });
-
-    const result = await response.json();
-    return { success: response.ok, message: result.message || (response.ok ? "User deleted" : "Failed") };
-  } catch (error) {
-    console.error("deleteUser error:", error);
-    return { success: false, message: "Network error" };
-  }
+  return request(
+    { method: "DELETE", url: API.ADMIN.USERS.DELETE(id), ...authConfig(token) },
+    "Failed to delete user"
+  );
 }
 
 export async function fetchRevenue(token: string) {
-  try {
-    const revenueUrl = `${API_V1}/admin/revenue/all`;
-    const response = await fetch(revenueUrl, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const result = await response.json();
-    return { success: response.ok, data: result.data };
-  } catch (error) {
-    return { success: false, data: null };
-  }
+  return request(
+    { method: "GET", url: API.ADMIN.REVENUE, ...authConfig(token) },
+    "Failed to fetch revenue"
+  );
 }
