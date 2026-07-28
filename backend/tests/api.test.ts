@@ -2,8 +2,8 @@ import request from "supertest";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import app from "../src/app";
-import { UserModel } from "../src/models/user.model";
+import app from "../src/app.js";
+import { UserModel } from "../src/models/user.model.js";
 
 const TEST_DB = process.env.MONGODB_URI || "mongodb://localhost:27017/fittrack";
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_here";
@@ -12,7 +12,6 @@ let userToken: string;
 let adminToken: string;
 let trainerToken: string;
 let userId: string;
-let trainerId: string;
 
 // Short unique suffix that keeps username under 20 chars
 const TS = String(Date.now()).slice(-6);
@@ -104,7 +103,6 @@ describe("Auth — Register", () => {
     expect(res.status).toBe(201);
     expect(res.body.data.user.role).toBe("trainer");
     trainerToken = res.body.data.token;
-    trainerId = res.body.data.user._id;
   });
 
   it("4. rejects duplicate email", async () => {
@@ -119,9 +117,10 @@ describe("Auth — Register", () => {
       email: `dup${TS}@test.com`,
     });
     expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
   });
 
-  it("6. blocks admin role from self-registration", async () => {
+  it("6. downgrades a self-registered admin role to user", async () => {
     const res = await request(app).post("/api/v1/auth/register").send({
       firstName: "Blocked",
       lastName: "Admin",
@@ -142,6 +141,7 @@ describe("Auth — Register", () => {
       email: "incomplete@test.com",
     });
     expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
   });
 
   it("8. rejects invalid email format", async () => {
@@ -151,6 +151,7 @@ describe("Auth — Register", () => {
       username: `ie${TS}`,
     });
     expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
   });
 
   it("9. never returns password in response", async () => {
@@ -185,13 +186,22 @@ describe("Auth — Login", () => {
     userToken = res.body.data.token;
   });
 
-  it("11. returns a valid JWT token", async () => {
+  it("11. returns a valid JWT token carrying the user's id and role", async () => {
     const res = await request(app).post("/api/v1/auth/login").send({
       email: testUser.email,
       password: testUser.password,
     });
     expect(typeof res.body.data.token).toBe("string");
     expect(res.body.data.token.split(".").length).toBe(3);
+
+    const decoded = jwt.verify(res.body.data.token, JWT_SECRET) as {
+      id: string;
+      email: string;
+      role: string;
+    };
+    expect(decoded.id).toBe(userId);
+    expect(decoded.email).toBe(testUser.email);
+    expect(decoded.role).toBe("user");
   });
 
   it("12. rejects wrong password", async () => {
@@ -199,8 +209,9 @@ describe("Auth — Login", () => {
       email: testUser.email,
       password: "WrongPassword",
     });
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
+    expect(res.body.data?.token).toBeUndefined();
   });
 
   it("13. rejects non-existent email", async () => {
@@ -208,12 +219,14 @@ describe("Auth — Login", () => {
       email: "ghost@nowhere.com",
       password: "anything",
     });
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
   });
 
   it("14. rejects empty login body", async () => {
     const res = await request(app).post("/api/v1/auth/login").send({});
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
   });
 
   it("15. works via legacy /api/auth/login", async () => {
@@ -237,6 +250,7 @@ describe("Profile", () => {
       .set("Authorization", `Bearer ${userToken}`);
     expect(res.status).toBe(200);
     expect(res.body.data.user.email).toBe(testUser.email);
+    expect(res.body.data.user.password).toBeUndefined();
   });
 
   it("17. GET /api/v1/auth/whoami — returns identity", async () => {
@@ -244,18 +258,21 @@ describe("Profile", () => {
       .get("/api/v1/auth/whoami")
       .set("Authorization", `Bearer ${userToken}`);
     expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
   });
 
-  it("18. rejects profile access without token", async () => {
+  it("18. rejects profile access without token — 401", async () => {
     const res = await request(app).get("/api/v1/auth/me");
-    expect(res.status).toBeGreaterThanOrEqual(401);
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 
-  it("19. rejects profile access with invalid token", async () => {
+  it("19. rejects profile access with invalid token — 401", async () => {
     const res = await request(app)
       .get("/api/v1/auth/me")
       .set("Authorization", "Bearer fakeinvalidtoken123");
-    expect(res.status).toBeGreaterThanOrEqual(401);
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 
   it("20. GET /api/v1/users/profile — returns profile via users route", async () => {
@@ -263,14 +280,22 @@ describe("Profile", () => {
       .get("/api/v1/users/profile")
       .set("Authorization", `Bearer ${userToken}`);
     expect(res.status).toBe(200);
+    expect(res.body.data.user.email).toBe(testUser.email);
   });
 
-  it("21. PUT /api/v1/users/profile — updates profile data", async () => {
+  it("21. PUT /api/v1/users/profile — persists the updated profile data", async () => {
     const res = await request(app)
       .put("/api/v1/users/profile")
       .set("Authorization", `Bearer ${userToken}`)
       .send({ firstName: "Updated", weight: 72 });
     expect(res.status).toBe(200);
+
+    // The update must survive a re-read, not just echo back in the response
+    const reread = await request(app)
+      .get("/api/v1/users/profile")
+      .set("Authorization", `Bearer ${userToken}`);
+    expect(reread.body.data.user.firstName).toBe("Updated");
+    expect(reread.body.data.user.weight).toBe(72);
   });
 
   it("22. PUT /api/v1/users/change-password — rejects wrong current password", async () => {
@@ -278,7 +303,15 @@ describe("Profile", () => {
       .put("/api/v1/users/change-password")
       .set("Authorization", `Bearer ${userToken}`)
       .send({ currentPassword: "WrongOldPass", newPassword: "NewPass123" });
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+
+    // The password must be unchanged — the original must still work
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email: testUser.email,
+      password: testUser.password,
+    });
+    expect(login.status).toBe(200);
   });
 });
 
@@ -292,17 +325,22 @@ describe("Trainers & Clients", () => {
       .get("/api/v1/users/trainers")
       .set("Authorization", `Bearer ${userToken}`);
     expect(res.status).toBe(200);
-    const trainers = res.body.data?.trainers || [];
-    expect(Array.isArray(trainers)).toBe(true);
+    expect(Array.isArray(res.body.data.trainers)).toBe(true);
   });
 
-  it("24. includes seeded trainers like Adam", async () => {
+  it("24. includes the trainer registered by this suite, and only trainers", async () => {
     const res = await request(app)
       .get("/api/v1/users/trainers")
       .set("Authorization", `Bearer ${userToken}`);
-    const trainers = res.body.data?.trainers || [];
-    const names = trainers.map((t: any) => t.firstName);
-    expect(names).toContain("Adam");
+    const trainers = res.body.data.trainers;
+
+    // Self-contained: asserts against the trainer this suite created in test 3,
+    // rather than depending on `npm run seed` having been run.
+    expect(trainers.map((t: any) => t.email)).toContain(testTrainer.email);
+
+    // The listing must not leak non-trainers or password hashes
+    expect(trainers.every((t: any) => t.role === "trainer")).toBe(true);
+    expect(trainers.every((t: any) => t.password === undefined)).toBe(true);
   });
 
   it("25. GET /api/v1/users/clients — trainer gets client list", async () => {
@@ -310,16 +348,19 @@ describe("Trainers & Clients", () => {
       .get("/api/v1/users/clients")
       .set("Authorization", `Bearer ${trainerToken}`);
     expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data.clients)).toBe(true);
   });
 
-  it("26. rejects trainers listing without auth", async () => {
+  it("26. rejects trainers listing without auth — 401", async () => {
     const res = await request(app).get("/api/v1/users/trainers");
-    expect(res.status).toBeGreaterThanOrEqual(401);
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 
-  it("27. rejects clients listing without auth", async () => {
+  it("27. rejects clients listing without auth — 401", async () => {
     const res = await request(app).get("/api/v1/users/clients");
-    expect(res.status).toBeGreaterThanOrEqual(401);
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 });
 
@@ -328,23 +369,36 @@ describe("Trainers & Clients", () => {
 // ════════════════════════════════════════════════════════════
 
 describe("Admin Panel", () => {
-  it("28. GET /api/v1/admin/users — admin lists all users", async () => {
+  it("28. GET /api/v1/admin/users — admin lists all users, paginated and sanitized", async () => {
     const res = await request(app)
       .get("/api/v1/admin/users")
       .set("Authorization", `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
+
+    // NOTE: this endpoint hand-rolls `{ data, meta }` instead of going through
+    // ResponseHelper, so unlike every other route it has no `success` field.
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.meta).toMatchObject({
+      page: 1,
+      limit: 10,
+      total: expect.any(Number),
+      totalPages: expect.any(Number),
+    });
+    expect(res.body.data.every((u: any) => u.password === undefined)).toBe(true);
   });
 
-  it("29. rejects admin routes for regular users", async () => {
+  it("29. rejects admin routes for regular users — 403, not merely 'not 200'", async () => {
     const res = await request(app)
       .get("/api/v1/admin/users")
       .set("Authorization", `Bearer ${userToken}`);
-    expect(res.status).toBeGreaterThanOrEqual(401);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 
-  it("30. rejects admin routes without auth", async () => {
+  it("30. rejects admin routes without auth — 401", async () => {
     const res = await request(app).get("/api/v1/admin/users");
-    expect(res.status).toBeGreaterThanOrEqual(401);
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 
   it("31. admin can delete a user", async () => {
@@ -365,13 +419,17 @@ describe("Admin Panel", () => {
       .delete(`/api/v1/admin/users/${tempId}`)
       .set("Authorization", `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
+
+    // A 200 alone does not prove the row is gone
+    expect(await UserModel.findById(tempId)).toBeNull();
   });
 
-  it("32. rejects trainer from accessing admin routes", async () => {
+  it("32. rejects trainer from accessing admin routes — 403", async () => {
     const res = await request(app)
       .get("/api/v1/admin/users")
       .set("Authorization", `Bearer ${trainerToken}`);
-    expect(res.status).toBeGreaterThanOrEqual(401);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 });
 
@@ -380,22 +438,25 @@ describe("Admin Panel", () => {
 // ════════════════════════════════════════════════════════════
 
 describe("Payment & Misc", () => {
-  it("33. POST /api/v1/payments/initiate — rejects without auth", async () => {
+  it("33. POST /api/v1/payments/initiate — rejects without auth — 401", async () => {
     const res = await request(app)
       .post("/api/v1/payments/initiate")
       .send({ trainerId: "fakeid", amount: 1000 });
-    expect(res.status).toBeGreaterThanOrEqual(401);
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 
-  it("34. POST /api/v1/payments/verify — rejects without auth", async () => {
+  it("34. POST /api/v1/payments/verify — rejects without auth — 401", async () => {
     const res = await request(app)
       .post("/api/v1/payments/verify")
       .send({ pidx: "fakepidx" });
-    expect(res.status).toBeGreaterThanOrEqual(401);
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 
   it("35. GET /api/v1/nonexistent — returns 404", async () => {
     const res = await request(app).get("/api/v1/nonexistent");
     expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
   });
 });
