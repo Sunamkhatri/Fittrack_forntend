@@ -13,15 +13,15 @@ Start-Sleep -Seconds 3
 Write-Host "[1/3] MongoDB starting on 127.0.0.1:27017" -ForegroundColor Yellow
 
 # API (new window)
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\FitTrack-Api'; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\backend'; npm run dev"
 Write-Host "[2/3] API starting on http://localhost:8089" -ForegroundColor Yellow
 
 Start-Sleep -Seconds 2
 
 # Frontend (new window)
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\FitTrack-Next'; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\frontend'; npm run dev"
 Write-Host "[3/3] Frontend starting on http://localhost:3000" -ForegroundColor Yellow
 
 Write-Host ""
 Write-Host "Open http://localhost:3000 in your browser." -ForegroundColor Green
-Write-Host "Postman collection: FitTrack-Api/postman/FitTrack-Auth.postman_collection.json" -ForegroundColor Cyan
+Write-Host "Postman collection: backend/postman/FitTrack-Auth.postman_collection.json" -ForegroundColor Cyan
