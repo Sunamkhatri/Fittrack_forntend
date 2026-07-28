@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import crypto from "crypto";
-import { JWT_SECRET } from "../configs/constant.js";
+import { JWT_SECRET, FRONTEND_ORIGIN } from "../configs/constant.js";
 import { CreateUserDTO, LoginUserDTO } from "../dtos/user.dto.js";
 import { HttpException } from "../exceptions/http-exception.js";
 import { IUser, UserModel } from "../models/user.model.js";
@@ -46,11 +46,15 @@ export class UserService {
     );
 
     try {
-      await SessionModel.create({
-        userId: user._id.toString(),
-        token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
+      await SessionModel.updateOne(
+        { token },
+        {
+          userId: user._id.toString(),
+          token,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+        { upsert: true }
+      );
     } catch (sessionError) {
       console.warn("Failed to save session:", sessionError);
     }
@@ -76,11 +80,15 @@ export class UserService {
     );
 
     try {
-      await SessionModel.create({
-        userId: user._id.toString(),
-        token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
+      await SessionModel.updateOne(
+        { token },
+        {
+          userId: user._id.toString(),
+          token,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+        { upsert: true }
+      );
     } catch (sessionError) {
       console.warn("Failed to save session:", sessionError);
     }
@@ -158,7 +166,7 @@ export class UserService {
   async getClients(trainerId: string) {
     const trainer = await UserModel.findById(trainerId).populate("clients", "-password");
     if (!trainer) throw new HttpException(404, "Trainer not found");
-    return trainer.clients.map((c) => sanitizeUser(c));
+    return (trainer.clients ?? []).map((c) => sanitizeUser(c));
   }
   async forgotPassword(email: string) {
     const user = await UserModel.findOne({ email });
@@ -172,7 +180,7 @@ export class UserService {
     await user.save({ validateBeforeSave: false });
 
     // Create reset url
-    const resetUrl = `http://localhost:3001/reset-password/${resetToken}`;
+    const resetUrl = `${FRONTEND_ORIGIN}/reset-password/${resetToken}`;
 
     const message = `
       <h1>You have requested a password reset</h1>
