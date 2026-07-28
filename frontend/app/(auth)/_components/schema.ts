@@ -21,7 +21,10 @@ export const registerSchema = z
       ),
     password: z.string().min(1, "Password is required"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
-    role: z.enum(["user", "admin"]),
+    role: z.enum(["user", "admin", "trainer"]),
+    age: z.number().int().min(13, "Must be at least 13 years old"),
+    gender: z.enum(["male", "female", "other"]),
+    weight: z.number().min(20, "Weight must be at least 20 kg"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
