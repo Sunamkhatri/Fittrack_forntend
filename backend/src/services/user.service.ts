@@ -170,8 +170,12 @@ export class UserService {
   }
   async forgotPassword(email: string) {
     const user = await UserModel.findOne({ email });
+
+    // Deliberately silent when the address is unknown. Returning a 404 here
+    // told an attacker exactly which emails hold accounts, so the caller
+    // responds 200 either way and only a real user receives mail.
     if (!user) {
-      throw new HttpException(404, "There is no user with that email");
+      return;
     }
 
     // Get reset token

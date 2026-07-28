@@ -66,20 +66,21 @@ describe("userService.forgotPassword", () => {
     expect(user.save).toHaveBeenCalledTimes(2);
   });
 
-  it("should reject with 404 when no user has that email", async () => {
+  it("should return silently when no user has that email", async () => {
     mockedFindOne.mockResolvedValue(null);
 
-    await expect(service.forgotPassword("ghost@nowhere.com")).rejects.toMatchObject(
-      { status: 404 }
-    );
-
-    expect(mockedSendEmail).not.toHaveBeenCalled();
+    // Must not throw: a 404 here would confirm to an attacker which
+    // addresses have accounts. The caller answers 200 either way.
+    await expect(
+      service.forgotPassword("ghost@nowhere.com")
+    ).resolves.toBeUndefined();
   });
 
-  it("should not send an email when the user lookup fails", async () => {
+  it("should not send an email for an unknown address", async () => {
     mockedFindOne.mockResolvedValue(null);
 
-    await expect(service.forgotPassword("ghost@nowhere.com")).rejects.toThrow();
+    await service.forgotPassword("ghost@nowhere.com");
+
     expect(mockedSendEmail).not.toHaveBeenCalled();
   });
 });
