@@ -8,7 +8,7 @@ import type { RegisterPayload, LoginPayload } from "../api/auth.api";
 export async function handleRegister(data: RegisterPayload) {
   const result = await registerUser(data);
 
-  if (!result.ok || !result.success) {
+  if (!result.success) {
     return { success: false, message: result.message };
   }
 
@@ -18,7 +18,7 @@ export async function handleRegister(data: RegisterPayload) {
 export async function handleLogin(data: LoginPayload) {
   const result = await loginUser(data);
 
-  if (!result.ok || !result.success || !result.data) {
+  if (!result.success || !result.data) {
     return { success: false, message: result.message };
   }
 
@@ -35,7 +35,7 @@ export async function handleLogout() {
 export async function handleForgotPassword(email: string) {
   const result = await forgotPassword(email);
 
-  if (!result.ok || !result.success) {
+  if (!result.success) {
     return { success: false, message: result.message };
   }
 
@@ -45,7 +45,7 @@ export async function handleForgotPassword(email: string) {
 export async function handleResetPassword(token: string, password: string) {
   const result = await resetPassword(token, password);
 
-  if (!result.ok || !result.success) {
+  if (!result.success) {
     return { success: false, message: result.message };
   }
 

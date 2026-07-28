@@ -1,13 +1,5 @@
-import { API_V1 } from "./config";
-
-const API_BASE = `${API_V1}/auth`;
-
-interface ApiResponse<T> {
-  status: number;
-  success: boolean;
-  message: string;
-  data: T;
-}
+import { request, authConfig } from "./axios-instance";
+import { API } from "./endpoints";
 
 export interface RegisterPayload {
   firstName: string;
@@ -47,151 +39,42 @@ export interface AuthUser {
   createdAt?: string;
 }
 
+export interface AuthSession {
+  user: AuthUser;
+  token: string;
+}
+
 export async function registerUser(data: RegisterPayload) {
-  try {
-    const response = await fetch(`${API_BASE}/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      return { ok: false, success: false, message: error.message || "Registration failed", data: null };
-    }
-
-    const result: ApiResponse<{ user: AuthUser; token: string }> =
-      await response.json();
-
-    return { ok: response.ok, ...result };
-  } catch (error) {
-    console.error("Registration error:", error);
-    return {
-      ok: false,
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to connect to server",
-      data: null,
-    };
-  }
+  return request<AuthSession>(
+    { method: "POST", url: API.AUTH.REGISTER, data },
+    "Registration failed"
+  );
 }
 
 export async function loginUser(data: LoginPayload) {
-  try {
-    const response = await fetch(`${API_BASE}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      return { ok: false, success: false, message: error.message || "Login failed", data: null };
-    }
-
-    const result: ApiResponse<{ user: AuthUser; token: string }> =
-      await response.json();
-
-    return { ok: response.ok, ...result };
-  } catch (error) {
-    console.error("Login error:", error);
-    return {
-      ok: false,
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to connect to server",
-      data: null,
-    };
-  }
+  return request<AuthSession>(
+    { method: "POST", url: API.AUTH.LOGIN, data },
+    "Login failed"
+  );
 }
 
 export async function getProfile(token: string) {
-  try {
-    const response = await fetch(`${API_BASE}/me`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      return { ok: false, success: false, message: error.message || "Profile fetch failed", data: null };
-    }
-
-    const result: ApiResponse<{ user: AuthUser }> = await response.json();
-
-    return { ok: response.ok, ...result };
-  } catch (error) {
-    console.error("Profile fetch error:", error);
-    return {
-      ok: false,
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to connect to server",
-      data: null,
-    };
-  }
+  return request<{ user: AuthUser }>(
+    { method: "GET", url: API.AUTH.ME, ...authConfig(token) },
+    "Profile fetch failed"
+  );
 }
 
 export async function forgotPassword(email: string) {
-  try {
-    const response = await fetch(`${API_BASE}/forgot-password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      return { ok: false, success: false, message: error.message || "Failed to send reset email", data: null };
-    }
-
-    const result: ApiResponse<{}> = await response.json();
-    return { ok: response.ok, ...result };
-  } catch (error) {
-    console.error("Forgot password error:", error);
-    return {
-      ok: false,
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to connect to server",
-      data: null,
-    };
-  }
+  return request(
+    { method: "POST", url: API.AUTH.FORGOT_PASSWORD, data: { email } },
+    "Failed to send reset email"
+  );
 }
 
 export async function resetPassword(token: string, password: string) {
-  try {
-    const response = await fetch(`${API_BASE}/reset-password/${token}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      return { ok: false, success: false, message: error.message || "Failed to reset password", data: null };
-    }
-
-    const result: ApiResponse<{}> = await response.json();
-    return { ok: response.ok, ...result };
-  } catch (error) {
-    console.error("Reset password error:", error);
-    return {
-      ok: false,
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to connect to server",
-      data: null,
-    };
-  }
+  return request(
+    { method: "PUT", url: API.AUTH.RESET_PASSWORD(token), data: { password } },
+    "Failed to reset password"
+  );
 }
