@@ -1,6 +1,6 @@
 import { AuthUser } from "./auth.api";
 
-const API_BASE = "http://localhost:8089/api/v1/admin/users";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/admin/users` : "http://localhost:8089/api/v1/admin/users";
 
 interface ApiResponse<T> {
   status: number;
@@ -112,5 +112,19 @@ export async function deleteUser(token: string, id: string) {
   } catch (error) {
     console.error("deleteUser error:", error);
     return { success: false, message: "Network error" };
+  }
+}
+
+export async function fetchRevenue(token: string) {
+  try {
+    const revenueUrl = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/admin/revenue/all` : "http://localhost:8089/api/v1/admin/revenue/all";
+    const response = await fetch(revenueUrl, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const result = await response.json();
+    return { success: response.ok, data: result.data };
+  } catch (error) {
+    return { success: false, data: null };
   }
 }
