@@ -2,9 +2,17 @@ import axios from "axios";
 import { PaymentModel } from "../models/payment.model.js";
 import { UserModel } from "../models/user.model.js";
 import { HttpException } from "../exceptions/http-exception.js";
+import { KHALTI_SECRET_KEY, KHALTI_BASE_URL, FRONTEND_ORIGIN } from "../configs/constant.js";
 
-const KHALTI_LIVE_SECRET_KEY = process.env.KHALTI_LIVE_SECRET_KEY || "live_secret_key_68791341fdd94846a146f0457ff7b455";
-const KHALTI_API_URL = "https://a.khalti.com/api/v2";
+function khaltiAuthHeaders() {
+  if (!KHALTI_SECRET_KEY) {
+    throw new HttpException(500, "KHALTI_SECRET_KEY is not configured");
+  }
+  return {
+    Authorization: `Key ${KHALTI_SECRET_KEY}`,
+    "Content-Type": "application/json",
+  };
+}
 
 export class PaymentService {
   async initiatePayment(userId: string, trainerId: string, amount: number) {
@@ -23,8 +31,8 @@ export class PaymentService {
     // 3. Setup Khalti Payload
     const purchaseOrderId = `${userId}_${trainerId}_${Date.now()}`;
     const payload = {
-      return_url: `${process.env.FRONTEND_URL || "http://localhost:3000"}/dashboard/trainers/success`,
-      website_url: `${process.env.FRONTEND_URL || "http://localhost:3000"}`,
+      return_url: `${FRONTEND_ORIGIN}/dashboard/trainers/success`,
+      website_url: FRONTEND_ORIGIN,
       amount: amount * 100, // Khalti requires amount in paisa
       purchase_order_id: purchaseOrderId,
       purchase_order_name: `FitTrack Trainer Subscription: ${trainer.firstName}`,
@@ -36,11 +44,8 @@ export class PaymentService {
     };
 
     // 4. Hit Khalti API
-    const response = await axios.post(`${KHALTI_API_URL}/epayment/initiate/`, payload, {
-      headers: {
-        Authorization: `Key ${KHALTI_LIVE_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
+    const response = await axios.post(`${KHALTI_BASE_URL}/epayment/initiate/`, payload, {
+      headers: khaltiAuthHeaders(),
     });
 
     if (response.data && response.data.pidx) {
@@ -73,14 +78,9 @@ export class PaymentService {
     }
 
     const response = await axios.post(
-      `${KHALTI_API_URL}/epayment/lookup/`,
+      `${KHALTI_BASE_URL}/epayment/lookup/`,
       { pidx },
-      {
-        headers: {
-          Authorization: `Key ${KHALTI_LIVE_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
+      { headers: khaltiAuthHeaders() }
     );
 
     const status = response.data.status;
