@@ -95,12 +95,44 @@ Import **backend/postman/FitTrack-Auth.postman_collection.json** into Postman.
 
 ```powershell
 cd backend
-npm test
+npm test              # everything
+npm run test:unit     # no database required
+npm run test:integration
 ```
 
-Runs the API integration suite against a live MongoDB.
+```
+src/__tests__/
+  unit/          mocked — config, middleware, services
+  integration/   real HTTP + live MongoDB, one file per resource
+  helpers/       shared fixtures
+```
+
+Unit tests mock their dependencies and need nothing running. Integration tests
+drive the real app with supertest and require MongoDB. Each integration file
+generates its own suffix and cleans up only its own fixtures, so files stay
+independent under parallel workers.
+
+## Auth
+
+The API accepts the JWT from either an `Authorization: Bearer` header or the
+`fittrack_token` httpOnly cookie. The browser sends the cookie automatically
+once the Next.js app has signed in; the header is what the tests and the Flutter
+client use.
+
+The frontend's `middleware.ts` guards routes at the edge — unauthenticated
+visitors are redirected to `/login`, and signed-in ones are kept off the auth
+pages. It reads a non-httpOnly `fittrack_role` cookie to pick a redirect target,
+which is a routing hint only: the API enforces the real role check and returns
+403 regardless of what that cookie says.
 
 ## Environment
+
+Copy the template and fill it in:
+
+```powershell
+cd backend
+cp .env.example .env
+```
 
 **backend/.env**
 
