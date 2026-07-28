@@ -1,19 +1,15 @@
-import express, { Request, Response, NextFunction } from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import morgan from "morgan";
 import path from "path";
-import { fileURLToPath } from "url";
 import userRoutes from "./routes/user.route.js";
 import adminRoutes from "./routes/admin.route.js";
 import { authMiddleware } from "./middlewares/auth.middleware.js";
 import { adminMiddleware } from "./middlewares/admin.middleware.js";
-import { HttpException } from "./exceptions/http-exception.js";
+import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
 import { ResponseHelper } from "./utils/response.util.js";
 import profileRoutes from "./routes/profile.route.js";
 import paymentRoutes from "./routes/payment.route.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -32,7 +28,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files statically
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// Resolved from cwd rather than import.meta.url so the module compiles under
+// both ESM and CommonJS. upload.middleware writes here using the same base, so
+// the served path and the write path cannot drift apart.
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/api/v1/health", (_req: Request, res: Response) => {
   return ResponseHelper.success(res, 200, "FitTrack API is running", {
@@ -46,17 +45,7 @@ app.use("/api/v1/users", profileRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/admin/users", authMiddleware, adminMiddleware, adminRoutes);
 
-app.use((_req: Request, res: Response) => {
-  return ResponseHelper.error(res, 404, "Route not found");
-});
-
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  if (err instanceof HttpException) {
-    return ResponseHelper.error(res, err.status, err.message);
-  }
-
-  console.error(err);
-  return ResponseHelper.error(res, 500, "Internal server error");
-});
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;
