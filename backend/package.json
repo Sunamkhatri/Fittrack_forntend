@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "npx tsx --watch index.ts",
     "start": "npx tsx index.ts",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --detectOpenHandles",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:handles": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
+    "typecheck": "tsc --noEmit",
     "seed": "npx tsx seed-trainers.ts"
   },
   "dependencies": {
