@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "npx tsx --watch index.ts",
     "start": "npx tsx index.ts",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:handles": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
+    "test": "jest",
+    "test:unit": "jest src/__tests__/unit",
+    "test:integration": "jest src/__tests__/integration",
+    "test:handles": "jest --detectOpenHandles",
     "typecheck": "tsc --noEmit",
     "seed": "npx tsx seed-trainers.ts"
   },
