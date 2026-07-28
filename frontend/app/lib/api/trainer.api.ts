@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8089/api/v1";
+import { API_V1 as API_URL } from "./config";
 
 export async function getTrainers(token: string) {
   try {

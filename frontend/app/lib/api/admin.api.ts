@@ -1,6 +1,7 @@
 import { AuthUser } from "./auth.api";
+import { API_V1 } from "./config";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/admin/users` : "http://localhost:8089/api/v1/admin/users";
+const API_BASE = `${API_V1}/admin/users`;
 
 interface ApiResponse<T> {
   status: number;
@@ -117,7 +118,7 @@ export async function deleteUser(token: string, id: string) {
 
 export async function fetchRevenue(token: string) {
   try {
-    const revenueUrl = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/admin/revenue/all` : "http://localhost:8089/api/v1/admin/revenue/all";
+    const revenueUrl = `${API_V1}/admin/revenue/all`;
     const response = await fetch(revenueUrl, {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` },

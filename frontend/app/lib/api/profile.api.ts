@@ -1,6 +1,7 @@
 import type { AuthUser } from "./auth.api";
+import { API_V1 } from "./config";
 
-const API_BASE = "http://localhost:8089/api/v1/users";
+const API_BASE = `${API_V1}/users`;
 
 export async function updateProfile(token: string, data: Partial<AuthUser>) {
   const response = await fetch(`${API_BASE}/profile`, {

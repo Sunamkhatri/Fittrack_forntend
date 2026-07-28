@@ -9,6 +9,7 @@ import {
   uploadProfileImage,
   deleteProfileImage,
 } from "@/app/lib/api/profile.api";
+import { API_ORIGIN } from "@/app/lib/api/config";
 import { Camera, Trash2, User as UserIcon } from "lucide-react";
 
 export default function ProfileManager({
@@ -140,7 +141,7 @@ export default function ProfileManager({
           <div className="relative mx-auto mb-4 h-32 w-32">
             {activeUser.profileImage ? (
               <img
-                src={`http://localhost:8089${activeUser.profileImage}`}
+                src={`${API_ORIGIN}${activeUser.profileImage}`}
                 alt="Profile"
                 className="h-full w-full rounded-full object-cover border-4 border-[#1e293b]"
               />

@@ -1,4 +1,6 @@
-const API_BASE = "http://localhost:8089/api/v1/auth";
+import { API_V1 } from "./config";
+
+const API_BASE = `${API_V1}/auth`;
 
 interface ApiResponse<T> {
   status: number;
