@@ -85,4 +85,13 @@ export class AdminController {
       next(error);
     }
   }
+
+  static async getRevenue(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const revenueData = await adminService.getRevenue();
+      return ResponseHelper.success(res, 200, "Revenue fetched successfully", revenueData);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

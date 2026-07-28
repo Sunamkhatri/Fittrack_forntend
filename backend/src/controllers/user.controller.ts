@@ -1,9 +1,11 @@
-import { Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import {
   CreateUserDTO,
   LoginUserDTO,
   UpdateUserDTO,
   UpdatePasswordDTO,
+  ForgotPasswordDTO,
+  ResetPasswordDTO,
 } from "../dtos/user.dto.js";
 import { AuthRequest } from "../middlewares/auth.middleware.js";
 import { UserService } from "../services/user.service.js";
@@ -101,6 +103,16 @@ export class UserController {
     }
   }
 
+  // DELETE /api/v1/users/profile-image
+  static async deleteProfileImage(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const user = await userService.updateUser(req.user!.id, { profileImage: null });
+      return ResponseHelper.success(res, 200, "Profile image deleted successfully", { user });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // PUT /api/v1/auth/update-password
   static async updatePassword(req: AuthRequest, res: Response, next: NextFunction) {
     try {
@@ -116,6 +128,55 @@ export class UserController {
       );
 
       return ResponseHelper.success(res, 200, "Password updated successfully", {});
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getTrainers(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const trainers = await userService.getTrainers();
+      return ResponseHelper.success(res, 200, "Trainers retrieved successfully", { trainers });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getClients(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const clients = await userService.getClients(req.user!.id);
+      return ResponseHelper.success(res, 200, "Clients retrieved successfully", { clients });
+    } catch (error) {
+      next(error);
+    }
+  }
+  static async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const parsed = ForgotPasswordDTO.safeParse(req.body);
+      if (!parsed.success) {
+        return ResponseHelper.error(res, 400, parsed.error.issues[0].message);
+      }
+
+      await userService.forgotPassword(parsed.data.email);
+      return ResponseHelper.success(res, 200, "Email sent successfully", {});
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const parsed = ResetPasswordDTO.safeParse(req.body);
+      if (!parsed.success) {
+        return ResponseHelper.error(res, 400, parsed.error.issues[0].message);
+      }
+
+      const user = await userService.resetPassword(
+        req.params.token,
+        parsed.data.password
+      );
+
+      return ResponseHelper.success(res, 200, "Password reset successfully", { user });
     } catch (error) {
       next(error);
     }

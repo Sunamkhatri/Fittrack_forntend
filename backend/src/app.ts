@@ -9,6 +9,8 @@ import { authMiddleware } from "./middlewares/auth.middleware.js";
 import { adminMiddleware } from "./middlewares/admin.middleware.js";
 import { HttpException } from "./exceptions/http-exception.js";
 import { ResponseHelper } from "./utils/response.util.js";
+import profileRoutes from "./routes/profile.route.js";
+import paymentRoutes from "./routes/payment.route.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +42,8 @@ app.get("/api/v1/health", (_req: Request, res: Response) => {
 
 app.use("/api/v1/auth", userRoutes);
 app.use("/api/auth", userRoutes); // Compatibility route for Flutter client
+app.use("/api/v1/users", profileRoutes);
+app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/admin/users", authMiddleware, adminMiddleware, adminRoutes);
 
 app.use((_req: Request, res: Response) => {
