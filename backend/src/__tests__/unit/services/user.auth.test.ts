@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { UserService } from "../../../services/user.service.js";
+import { UserService, INVALID_CREDENTIALS } from "../../../services/user.service.js";
 import { UserRepository } from "../../../repositories/user.repository.js";
 import { SessionModel } from "../../../models/session.model.js";
 import { JWT_SECRET } from "../../../configs/constant.js";
@@ -201,10 +201,9 @@ describe("UserService.login", () => {
       .login({ email: input.email, password: "WrongPass" } as any)
       .catch((e) => e.message);
 
-    // Currently these differ ("No account found with this email" vs
-    // "Incorrect password"), which lets an attacker enumerate accounts the
-    // same way forgot-password used to. Documented rather than asserted equal
-    // so the difference is visible rather than silently accepted.
-    expect(unknownEmail).not.toBe(wrongPassword);
+    // Identical by design: a different message for "no such account" would
+    // let an attacker enumerate registered emails.
+    expect(unknownEmail).toBe(wrongPassword);
+    expect(unknownEmail).toBe(INVALID_CREDENTIALS);
   });
 });

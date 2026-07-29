@@ -12,6 +12,11 @@ import { sendEmail } from "../utils/email.util.js";
 
 const userRepository = new UserRepository();
 
+// One message for both "no such account" and "wrong password". Distinguishing
+// them tells an attacker which emails are registered, which is the same
+// enumeration leak that was fixed in forgot-password.
+export const INVALID_CREDENTIALS = "Invalid email or password";
+
 const sanitizeUser = (user: IUser | any) => {
   const obj = typeof user.toObject === "function" ? user.toObject() : user;
   const { password: _, ...sanitized } = obj;
@@ -65,12 +70,12 @@ export class UserService {
   async login(input: z.infer<typeof LoginUserDTO>) {
     const user = await userRepository.findByEmail(input.email);
     if (!user) {
-      throw new HttpException(400, "No account found with this email");
+      throw new HttpException(400, INVALID_CREDENTIALS);
     }
 
     const isMatch = await bcrypt.compare(input.password, user.password);
     if (!isMatch) {
-      throw new HttpException(400, "Incorrect password");
+      throw new HttpException(400, INVALID_CREDENTIALS);
     }
 
     const token = jwt.sign(
