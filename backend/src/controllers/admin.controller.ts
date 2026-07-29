@@ -16,10 +16,13 @@ export class AdminController {
 
       const result = await adminService.getUsers(search, page, limit);
 
-      return res.status(200).json({
-        data: result.users,
-        meta: result.meta
-      });
+      return ResponseHelper.successWithMeta(
+        res,
+        200,
+        "Users fetched successfully",
+        result.users,
+        result.meta
+      );
     } catch (error) {
       next(error);
     }

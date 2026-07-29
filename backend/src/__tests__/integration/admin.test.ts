@@ -47,8 +47,9 @@ describe("GET /api/v1/admin/users", () => {
 
     expect(res.status).toBe(200);
 
-    // NOTE: this route hand-rolls { data, meta } instead of going through
-    // ResponseHelper, so unlike every other route it has no `success` field.
+    // Goes through ResponseHelper.successWithMeta like every other route, so
+    // the envelope carries success/message alongside data and meta.
+    expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.meta).toMatchObject({
       page: 1,
