@@ -4,3 +4,9 @@ node_modules
 .env.local
 dist
 tsconfig.tsbuildinfo
+
+# Playwright
+test-results
+playwright-report
+blob-report
+.playwright
