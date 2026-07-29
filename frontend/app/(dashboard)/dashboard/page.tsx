@@ -28,12 +28,19 @@ export default async function DashboardPage() {
       <WelcomeBanner username={username} />
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard label="Calories Burned" value="520" unit="kcal" />
-        <StatsCard label="Calories Consumed" value="2,100" unit="kcal" />
-        <StatsCard label="Water Intake" value="2.5" unit="L" />
-        <StatsCard label="Workout Minutes" value="45" unit="min" />
-        <StatsCard label="Steps" value="8,432" />
-        <StatsCard label="Current Weight" value={user.weight?.toString() || "75"} unit="kg" />
+        {/* Activity tracking is not implemented yet, so these are flagged as
+            sample figures rather than presented as the user's own data. The
+            last two come from the profile and are real. */}
+        <StatsCard label="Calories Burned" value="520" unit="kcal" sample />
+        <StatsCard label="Calories Consumed" value="2,100" unit="kcal" sample />
+        <StatsCard label="Water Intake" value="2.5" unit="L" sample />
+        <StatsCard label="Workout Minutes" value="45" unit="min" sample />
+        <StatsCard label="Steps" value="8,432" sample />
+        <StatsCard
+          label="Current Weight"
+          value={user.weight ? user.weight.toString() : null}
+          unit="kg"
+        />
       </div>
 
       <WeeklyCharts />
