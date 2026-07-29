@@ -112,6 +112,28 @@ drive the real app with supertest and require MongoDB. Each integration file
 generates its own suffix and cleans up only its own fixtures, so files stay
 independent under parallel workers.
 
+### End-to-end (Playwright)
+
+```powershell
+cd frontend
+npx playwright install chromium   # first run only
+npm run test:e2e
+npm run test:e2e:ui               # interactive
+```
+
+```
+e2e/
+  auth.spec.ts        register, login, logout, session persistence
+  dashboard.spec.ts   stats, sidebar navigation, profile
+  middleware.spec.ts  edge route protection and role redirects
+```
+
+Playwright starts the API and the Next app itself, so `npm run test:e2e` is a
+single command; an already-running dev server is reused. The specs register
+real accounts through the UI, so MongoDB must be up.
+
+**91 tests total** — 12 unit, 53 integration, 26 end-to-end.
+
 ## Auth
 
 The API accepts the JWT from either an `Authorization: Bearer` header or the
