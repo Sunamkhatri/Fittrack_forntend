@@ -37,15 +37,28 @@ export async function registerViaUi(
 
   await page.getByRole("button", { name: /create account|register|sign up/i }).click();
 
+  // The form posts, then calls router.push("/login"). Waiting for that
+  // navigation to settle stops the next step racing a pending transition —
+  // the cause of intermittent "expected /dashboard, got /login" failures.
+  await page.waitForURL(/\/login|\/dashboard/, { timeout: 30_000 });
+
   return creds;
 }
 
+/**
+ * Submits the login form. Deliberately does NOT wait for a navigation — it is
+ * also used with bad credentials, where the page is expected to stay put and
+ * show an error. Callers that expect success should await the URL themselves.
+ */
 export async function loginViaUi(
   page: Page,
   email: string,
   password: string
 ) {
-  await page.goto("/login");
+  if (!page.url().includes("/login")) {
+    await page.goto("/login");
+  }
+
   await page.fill("#login-email", email);
   await page.fill("#login-password", password);
   await page.getByRole("button", { name: /sign in/i }).click();
@@ -56,12 +69,13 @@ export async function signUpAndLogin(page: Page) {
   const creds = buildCredentials();
   await registerViaUi(page, creds);
 
-  // Registration may drop the user on login rather than straight into the app,
-  // so sign in explicitly and assert we ended up authenticated either way.
+  // Registration currently redirects to /login rather than signing the user
+  // in, so this is the normal path; the guard keeps the helper correct if that
+  // ever changes.
   if (!page.url().includes("/dashboard")) {
     await loginViaUi(page, creds.email, creds.password);
   }
 
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 20_000 });
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
   return creds;
 }

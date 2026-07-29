@@ -15,8 +15,8 @@ export default defineConfig({
   // code under test. A second attempt distinguishes that from a real failure.
   retries: 1,
   reporter: [["list"]],
-  timeout: 45_000,
-  expect: { timeout: 10_000 },
+  timeout: 60_000,
+  expect: { timeout: 15_000 },
 
   use: {
     baseURL: FRONTEND_URL,
@@ -41,10 +41,14 @@ export default defineConfig({
       stderr: "pipe",
     },
     {
-      command: "npm run dev",
+      // Production build rather than `next dev`. Dev compiles each route on
+      // first visit, which made the first navigation to /workouts, /nutrition
+      // and /progress take 20-45s and flake against the expect timeout. The
+      // build costs ~40s once, then every navigation is fast and deterministic.
+      command: "npm run build && npm start",
       url: FRONTEND_URL,
       reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
+      timeout: 240_000,
       stdout: "pipe",
       stderr: "pipe",
     },
