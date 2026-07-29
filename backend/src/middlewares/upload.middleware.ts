@@ -3,6 +3,7 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { Request } from "express";
 import fs from "fs";
+import { HttpException } from "../exceptions/http-exception.js";
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -20,6 +21,8 @@ const storage = multer.diskStorage({
   },
 });
 
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
 const fileFilter = (
   _req: Request,
   file: Express.Multer.File,
@@ -29,12 +32,15 @@ const fileFilter = (
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only JPEG and PNG images are allowed"));
+    // An HttpException rather than a plain Error: a bad upload is the client's
+    // mistake, and a plain Error reaches errorHandler as an unexpected failure
+    // and is reported as a 500.
+    cb(new HttpException(400, "Only JPEG and PNG images are allowed"));
   }
 };
 
 export const uploads = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: MAX_UPLOAD_BYTES },
 });
