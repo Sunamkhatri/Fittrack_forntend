@@ -23,6 +23,9 @@ export const multipartConfig = (token: string): AxiosRequestConfig => ({
   },
 });
 
+export const NETWORK_ERROR_MESSAGE =
+  "Could not reach the server. Check your connection and try again.";
+
 export interface ApiResult<T = unknown> {
   success: boolean;
   message: string;
@@ -54,11 +57,23 @@ export async function request<T = unknown>(
     };
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      return {
-        success: false,
-        message: error.response?.data?.message || error.message || fallbackMessage,
-        data: null,
-      };
+      // A response means the API rejected us deliberately — surface its message.
+      if (error.response?.data?.message) {
+        return {
+          success: false,
+          message: error.response.data.message,
+          data: null,
+        };
+      }
+
+      // No response means the request never completed. axios reports these as
+      // raw node codes ("read ECONNRESET", "ECONNREFUSED"), which are meaningless
+      // to a user and were being rendered straight into the form.
+      if (!error.response) {
+        return { success: false, message: NETWORK_ERROR_MESSAGE, data: null };
+      }
+
+      return { success: false, message: fallbackMessage, data: null };
     }
     return { success: false, message: fallbackMessage, data: null };
   }
